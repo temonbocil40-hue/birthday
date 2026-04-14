@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hbdjiet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { 
+            --gold: #c5a059; 
+            --white: #ffffff; 
+            --pink: #ff4d6d;
+            --spotify-green: #1DB954;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html { 
+            scroll-behavior: smooth; 
+            scroll-snap-type: y mandatory; 
+        }
+
+        body { 
+            background-color: #000; 
+            color: var(--white); 
+            font-family: 'Montserrat', sans-serif; 
+            overflow: hidden; 
+        }
+
+        /* PIN LOCK */
+        #pin-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+            z-index: 10000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; transition: 0.8s;
+        }
+
+        .pin-box {
+            text-align: center; background: var(--glass); padding: 40px 30px;
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+        }
+
+        #pin-input {
+            background: transparent; border: none; border-bottom: 2px solid var(--gold);
+            color: var(--gold); font-size: 2.5rem; text-align: center; width: 180px;
+            letter-spacing: 10px; outline: none; margin-bottom: 30px;
+        }
+
+        /* WEB LAYOUT */
+        #main-content { display: none; }
+
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; 
+            justify-content: center; align-items: center; transition: 1s;
+        }
+
+        #overlay button, .btn-unlock {
+            padding: 12px 35px; background: transparent; border: 1.5px solid var(--gold);
+            color: var(--gold); border-radius: 50px; cursor: pointer; transition: 0.3s;
+            letter-spacing: 2px; font-weight: bold;
+        }
+
+        #overlay button:hover, .btn-unlock:hover { background: var(--gold); color: #000; }
+
+        section {
+            height: 100vh; width: 100vw; position: relative;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; scroll-snap-align: start; scroll-snap-stop: always;
+        }
+
+        .bg-media {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; filter: brightness(40%);
+        }
+
+        .content { 
+            position: relative; z-index: 10; text-align: center; padding: 20px; 
+            opacity: 0; transform: translateY(30px); transition: 0.8s;
+        }
+
+        .active .content { opacity: 1; transform: translateY(0); }
+
+        h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 8vw, 4rem); color: var(--gold); }
+
+        /* FLOATING MENU */
+        .side-menu {
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+
+        .menu-btn {
+            background: rgba(0,0,0,0.7); border: 1px solid var(--gold);
+            color: var(--gold); width: 50px; height: 50px; border-radius: 50%;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.3s; font-size: 1.2rem;
+        }
+
+        .menu-btn.spotify:hover { border-color: var(--spotify-green); color: var(--spotify-green); }
+
+        /* OVERLAYS (GAME & SPOTIFY) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 10001;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        #game-canvas {
+            border: 2px solid var(--gold); background: #0a0a0a;
+            max-width: 90vw; cursor: crosshair; border-radius: 15px;
+        }
+
+        .heart {
+            position: fixed; top: -20px; z-index: 999; pointer-events: none;
+            animation: fall-love linear infinite;
+        }
+
+        @keyframes fall-love {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+        }
+
+        .shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="pin-overlay">
+        <div class="pin-box" id="pinBox">
+            <h2 style="color:var(--gold); margin-bottom:15px; letter-spacing: 3px;">ENTER PIN</h2>
+            <input type="password" id="pin-input" maxlength="4" placeholder="****" autocomplete="off">
+            <br>
+            <button class="btn-unlock" onclick="checkPin()">UNLOCK</button>
+            <p style="color:var(--gold); font-size: 0.7rem; margin-top: 20px; opacity: 0.6;">Hint: 1504</p>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="overlay">
+            <button onclick="startJourney()">Klik ni tong</button>
+        </div>
+
+        <div id="heart-wrapper"></div>
+
+        <audio id="bdayMusic" loop>
+            <source src="Downloads/music.mp3.mp3" type="audio/mpeg">
+        </audio>
+
+        <div class="side-menu">
+            <button class="menu-btn" onclick="toggleMusic()" title="Background Music">
+                <i id="musicIcon" class="fas fa-play"></i>
+            </button>
+            <button class="menu-btn spotify" onclick="toggleSpotify()" title="Spotify Playlist">
+                <i class="fab fa-spotify"></i>
+            </button>
+            <button class="menu-btn" onclick="openGame()" title="Play Game">
+                <i class="fas fa-gamepad"></i>
+            </button>
+        </div>
+
+        <section>
+            <img src="c:\Users\rifia\Downloads\jiet.jpeg" class="bg-media">
+            <div class="content">
+                <h1>happy birthday jelek</h1>
+                <h1 style="font-size: 2rem">15 / 04 / 2026</h1>
+            </div>
+        </section>
+
+        <section>
+            <img src="c:\Users\rifia\Downloads\bontong.jpeg" class="bg-media">
+            <div class="content"><h1>happy nineteen yo</h1></div>
+        </section>
+
+        <section><img src="c:\Users\rifia\OneDrive\Pictures\Screenshots\Screenshot 2026-04-13 124110.png" class="bg-media"></section>
+        <section><img src="c:\Users\rifia\OneDrive\Pictures\Screenshots\Screenshot 2026-04-13 125053.png" class="bg-media"></section>
+        <section><img src="c:\Users\rifia\OneDrive\Pictures\Screenshots\Screenshot 2026-04-13 124828.png" class="bg-media"></section>
+
+        <section>
+            <img src="c:\Users\rifia\OneDrive\Pictures\Screenshots\Screenshot 2026-04-13 124324.png" class="bg-media">
+            <div class="content">
+                <h1 style="font-size: 1.5rem; padding: 0 10%;">Semoga Allah memberi kesehatan dan ketabahan menjalani hari-hari, yaumul milad barakallah.</h1>
+            </div>
+        </section>
+
+        <section>
+            <img src="c:\Users\rifia\OneDrive\Pictures\Screenshots\Screenshot 2026-04-13 134427.png" class="bg-media">
+            <div class="content">
+                <span style="letter-spacing:5px">Fairuz Nathania</span>
+                <h1>15/04/2007</h1>
+            </div>
+        </section>
+
+        <section id="videoSection">
+            <video id="myVideo" loop playsinline class="bg-media" style="filter: none;">
+                <source src="Downloads/video.mp4.MP4" type="video/mp4">
+            </video>
+        </section>
+    </div>
+
+   <div id="spotify-overlay" class="modal-overlay">
+    <h2 style="color:var(--spotify-green); margin-bottom:20px"><i class="fab fa-spotify"></i> My Playlist</h2>
+    
+   <iframe 
+    style="border-radius:12px" 
+    src="https://open.spotify.com/embed/playlist/2zKu0cUl2BxD0Zkfg5EQjR?utm_source=generator" 
+    width="100%" 
+    height="380" 
+    frameBorder="0" 
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+    loading="lazy">
+</iframe>
+
+    <button class="btn-unlock" style="margin-top:20px; border-color: var(--spotify-green); color: var(--spotify-green);" onclick="toggleSpotify()">CLOSE</button>
+</div>
+
+    <button class="btn-unlock" style="margin-top:20px; border-color: var(--spotify-green); color: var(--spotify-green);" onclick="toggleSpotify()">CLOSE</button>
+</div>
+
+    <button class="btn-unlock" style="margin-top:20px; border-color: var(--spotify-green); color: var(--spotify-green);" onclick="toggleSpotify()">CLOSE</button>
+</div>
+
+    <div id="game-overlay" class="modal-overlay">
+        <h2 style="color:var(--gold); margin-bottom:10px">Catch the Hearts!</h2>
+        <div style="color:var(--gold); margin-bottom:10px">Score: <span id="score">0</span></div>
+        <canvas id="game-canvas"></canvas>
+        <button class="btn-unlock" style="margin-top:20px" onclick="closeGame()">EXIT GAME</button>
+    </div>
+
+    <script>
+        const audio = document.getElementById('bdayMusic');
+        const video = document.getElementById('myVideo');
+        const musicIcon = document.getElementById('musicIcon');
+
+        // PIN CHECK
+        function checkPin() {
+            const inputVal = document.getElementById('pin-input').value;
+            if (inputVal === "1504") {
+                document.getElementById('pin-overlay').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.body.style.overflow = 'auto';
+            } else {
+                document.getElementById('pinBox').classList.add('shake');
+                setTimeout(() => document.getElementById('pinBox').classList.remove('shake'), 400);
+            }
+        }
+
+        function startJourney() {
+            document.getElementById('overlay').style.display = 'none';
+            audio.play();
+            musicIcon.className = 'fas fa-pause';
+        }
+
+        function toggleMusic() {
+            if (audio.paused) { audio.play(); musicIcon.className = 'fas fa-pause'; }
+            else { audio.pause(); musicIcon.className = 'fas fa-play'; }
+        }
+
+        // SPOTIFY TOGGLE
+        function toggleSpotify() {
+            const spot = document.getElementById('spotify-overlay');
+            if (spot.style.display === 'flex') {
+                spot.style.display = 'none';
+            } else {
+                spot.style.display = 'flex';
+                // Opsional: Matikan musik latar saat buka spotify agar tidak tabrakan
+                audio.pause();
+                musicIcon.className = 'fas fa-play';
+            }
+        }
+
+        // SMART OBSERVER (Video vs Music)
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    if (entry.target.id === 'videoSection') {
+                        audio.volume = 0.1;
+                        video.play();
+                    }
+                } else {
+                    entry.target.classList.remove('active');
+                    if (entry.target.id === 'videoSection') {
+                        audio.volume = 1.0;
+                        video.pause();
+                    }
+                }
+            });
+        }, { threshold: 0.6 });
+
+        document.querySelectorAll('section').forEach(s => observer.observe(s));
+
+        // GAME LOGIC
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let gameActive = false, score = 0, hearts = [];
+
+        function openGame() {
+            document.getElementById('game-overlay').style.display = 'flex';
+            canvas.width = window.innerWidth * 0.8;
+            canvas.height = window.innerHeight * 0.5;
+            gameActive = true; score = 0; hearts = []; runGame();
+        }
+
+        function closeGame() { document.getElementById('game-overlay').style.display = 'none'; gameActive = false; }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left, y = e.clientY - rect.top;
+            hearts.forEach((h, i) => {
+                if (Math.hypot(h.x - x, h.y - y) < 30) {
+                    hearts.splice(i, 1);
+                    score += 10; document.getElementById('score').innerText = score;
+                }
+            });
+        });
+
+        function runGame() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (Math.random() < 0.04) hearts.push({ x: Math.random()*canvas.width, y: -20, s: 2+Math.random()*4 });
+            hearts.forEach((h, i) => {
+                h.y += h.s;
+                ctx.font = "24px serif";
+                ctx.fillText("❤️", h.x, h.y);
+                if (h.y > canvas.height) hearts.splice(i, 1);
+            });
+            requestAnimationFrame(runGame);
+        }
+
+        setInterval(() => {
+            if (document.getElementById('main-content').style.display === 'block') {
+                const h = document.createElement('div');
+                h.className = 'heart';
+                h.innerHTML = '❤️';
+                 h.innerHTML = '🤍';
+                h.style.left = Math.random() * 100 + 'vw';
+                h.style.animationDuration = (Math.random()*3+3)+'s';
+                document.getElementById('heart-wrapper').appendChild(h);
+                setTimeout(() => h.remove(), 5000);
+            }
+        }, 400);
+    </script>
+</body>
+</html>
